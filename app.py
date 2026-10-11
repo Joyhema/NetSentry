@@ -11,160 +11,130 @@ from flask import Flask, jsonify, render_template_string, request
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "netsentry.db")
 
-app = Flask(
-    __name__,
-    static_folder="static",
-    static_url_path="/static"
-)
-
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 START_TIME = time.time()
 
 DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#0b1220">
-    <meta name="description" content="NetSentry network monitoring dashboard">
-    <title>NetSentry - Network Security Monitor</title>
-    <link rel="manifest" href="/static/manifest.json">
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; padding: 24px; background: #0b1220;
-            color: #e5e7eb; font-family: Arial, sans-serif;
-        }
-        header {
-            display: flex; justify-content: space-between;
-            align-items: center; flex-wrap: wrap; gap: 12px;
-            margin-bottom: 24px;
-        }
-        h1 { margin: 0; color: #60a5fa; }
-        .status { color: #86efac; font-weight: bold; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-            gap: 16px;
-        }
-        .card {
-            background: #111c30; border: 1px solid #26354d;
-            border-radius: 12px; padding: 20px; min-width: 0;
-        }
-        .card h2 { font-size: 15px; color: #9ca3af; font-weight: normal; }
-        .value { font-size: 28px; font-weight: bold; overflow-wrap: anywhere; }
-        section { margin-top: 24px; }
-        button {
-            border: 0; border-radius: 8px; padding: 10px 14px;
-            background: #2563eb; color: white; cursor: pointer;
-        }
-        button:hover { background: #1d4ed8; }
-        .event {
-            padding: 12px 0; border-bottom: 1px solid #26354d;
-            overflow-wrap: anywhere;
-        }
-        .muted { color: #9ca3af; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1220">
+<title>NetSentry - Network Security Monitor</title>
+<style>
+* { box-sizing: border-box; }
+body { margin:0; padding:24px; background:#0b1220; color:#e5e7eb; font-family:Arial,sans-serif; }
+header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+h1 { margin:0; color:#60a5fa; }
+.status { color:#86efac; font-weight:bold; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; }
+.card { background:#111c30; border:1px solid #26354d; border-radius:12px; padding:20px; min-width:0; }
+.card h2 { font-size:15px; color:#9ca3af; font-weight:normal; }
+.value { font-size:28px; font-weight:bold; overflow-wrap:anywhere; }
+section { margin-top:24px; }
+button { border:0; border-radius:8px; padding:10px 14px; background:#2563eb; color:white; cursor:pointer; }
+.event { padding:12px 0; border-bottom:1px solid #26354d; overflow-wrap:anywhere; }
+.muted { color:#9ca3af; }
+</style>
 </head>
 <body>
 <header>
-    <div>
-        <h1>NetSentry</h1>
-        <p class="muted">Network Security Monitor</p>
-    </div>
-    <div class="status" id="status">Connecting...</div>
+  <div><h1>NetSentry</h1><p class="muted">Network Security Monitor</p></div>
+  <div class="status" id="status">Connecting...</div>
 </header>
 <main>
-    <div class="grid">
-        <div class="card"><h2>CPU Usage</h2><div class="value" id="cpu">--%</div></div>
-        <div class="card"><h2>Memory Usage</h2><div class="value" id="memory">--%</div></div>
-        <div class="card"><h2>Disk Usage</h2><div class="value" id="disk">--%</div></div>
-        <div class="card"><h2>Packets Sent</h2><div class="value" id="sent">--</div></div>
-        <div class="card"><h2>Packets Received</h2><div class="value" id="received">--</div></div>
-        <div class="card"><h2>Uptime</h2><div class="value" id="uptime">--</div></div>
-    </div>
-    <section class="card">
-        <h2>Security Events</h2>
-        <button onclick="loadEvents()">Refresh Events</button>
-        <div id="events" class="muted" aria-live="polite">Loading events...</div>
-    </section>
-    <section class="card">
-        <h2>About NetSentry</h2>
-        <p class="muted">
-            This prototype displays server system usage and recorded
-            security events. Alerts are indicators, not proof of an attack.
-            This is not a production-grade intrusion detection system.
-        </p>
-    </section>
+  <h2>Laptop Metrics</h2>
+  <p class="muted" id="metricHost">Waiting for laptop agent...</p>
+  <div class="grid">
+    <div class="card"><h2>CPU Usage</h2><div class="value" id="cpu">--%</div></div>
+    <div class="card"><h2>Memory Usage</h2><div class="value" id="memory">--%</div></div>
+    <div class="card"><h2>Disk Usage</h2><div class="value" id="disk">--%</div></div>
+    <div class="card"><h2>Server Packets Sent</h2><div class="value" id="sent">--</div></div>
+    <div class="card"><h2>Server Packets Received</h2><div class="value" id="received">--</div></div>
+    <div class="card"><h2>Server Uptime</h2><div class="value" id="uptime">--</div></div>
+  </div>
+  <section class="card">
+    <h2>Security Events</h2>
+    <button onclick="loadEvents()">Refresh Events</button>
+    <div id="events" class="muted" aria-live="polite">Loading events...</div>
+  </section>
+  <section class="card">
+    <h2>About NetSentry</h2>
+    <p class="muted">Laptop metrics are reported by your agent. Server statistics describe the hosted server. Alerts are indicators, not proof of an attack.</p>
+  </section>
 </main>
 <script>
 async function loadStats() {
-    try {
-        const response = await fetch("/api/stats");
-        if (!response.ok) throw new Error("Stats request failed");
-        const data = await response.json();
+  try {
+    const r = await fetch("/api/stats");
+    if (!r.ok) throw new Error("Stats unavailable");
+    const d = await r.json();
+    document.getElementById("status").textContent = d.status || "Online";
+    document.getElementById("sent").textContent = Number(d.network.packets_sent).toLocaleString();
+    document.getElementById("received").textContent = Number(d.network.packets_recv).toLocaleString();
+    const s = Number(d.uptime_seconds) || 0;
+    document.getElementById("uptime").textContent =
+      Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
+  } catch (e) {
+    document.getElementById("status").textContent = "Connection error";
+  }
+}
 
-        document.getElementById("status").textContent = data.status || "Online";
-        document.getElementById("cpu").textContent = data.cpu_percent + "%";
-        document.getElementById("memory").textContent = data.memory_percent + "%";
-        document.getElementById("disk").textContent = data.disk_percent + "%";
-        document.getElementById("sent").textContent =
-            Number(data.network.packets_sent).toLocaleString();
-        document.getElementById("received").textContent =
-            Number(data.network.packets_recv).toLocaleString();
-
-        const seconds = Number(data.uptime_seconds) || 0;
-        document.getElementById("uptime").textContent =
-            Math.floor(seconds / 3600) + "h " +
-            Math.floor((seconds % 3600) / 60) + "m";
-    } catch (error) {
-        document.getElementById("status").textContent = "Connection error";
+async function loadLaptopMetrics() {
+  try {
+    const r = await fetch("/api/laptop-metrics");
+    if (!r.ok) throw new Error("Metrics unavailable");
+    const d = await r.json();
+    if (!d.available) {
+      document.getElementById("metricHost").textContent = "Waiting for laptop agent...";
+      return;
     }
+    document.getElementById("cpu").textContent = d.cpu_percent + "%";
+    document.getElementById("memory").textContent = d.memory_percent + "%";
+    document.getElementById("disk").textContent = d.disk_percent + "%";
+    document.getElementById("metricHost").textContent =
+      "Laptop: " + d.hostname + " | Last update: " + d.timestamp;
+  } catch (e) {
+    document.getElementById("metricHost").textContent = "Could not load laptop metrics.";
+  }
 }
 
 async function loadEvents() {
-    const container = document.getElementById("events");
-    container.textContent = "Loading events...";
-    try {
-        const response = await fetch("/api/events");
-        if (!response.ok) throw new Error("Events request failed");
-        const data = await response.json();
-        container.replaceChildren();
-
-        if (!Array.isArray(data) || data.length === 0) {
-            container.textContent = "No security events yet.";
-            return;
-        }
-
-        data.forEach(function(event) {
-            const item = document.createElement("div");
-            item.className = "event";
-            const heading = document.createElement("strong");
-            heading.textContent = "[" + (event.severity || "INFO") +
-                "] " + (event.event_type || "Security Event");
-            const message = document.createElement("div");
-            message.textContent = event.message || "No additional details";
-            const timestamp = document.createElement("small");
-            timestamp.className = "muted";
-            timestamp.textContent = event.time || event.timestamp || "";
-            item.append(heading, message, timestamp);
-            container.appendChild(item);
-        });
-    } catch (error) {
-        container.textContent = "Could not load events.";
+  const box = document.getElementById("events");
+  box.textContent = "Loading events...";
+  try {
+    const r = await fetch("/api/events");
+    if (!r.ok) throw new Error("Events unavailable");
+    const data = await r.json();
+    box.replaceChildren();
+    if (!Array.isArray(data) || !data.length) {
+      box.textContent = "No security events yet.";
+      return;
     }
+    data.forEach(function(ev) {
+      const item = document.createElement("div");
+      item.className = "event";
+      const heading = document.createElement("strong");
+      heading.textContent = "[" + (ev.severity || "INFO") + "] " + (ev.event_type || "Event");
+      const message = document.createElement("div");
+      message.textContent = ev.message || "";
+      const time = document.createElement("small");
+      time.className = "muted";
+      time.textContent = ev.time || ev.timestamp || "";
+      item.append(heading, message, time);
+      box.appendChild(item);
+    });
+  } catch (e) {
+    box.textContent = "Could not load events.";
+  }
 }
 
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function() {
-        navigator.serviceWorker.register("/static/sw.js").catch(function(error) {
-            console.error("Service worker registration failed:", error);
-        });
-    });
-}
 loadStats();
+loadLaptopMetrics();
 loadEvents();
-setInterval(loadStats, 3000);
+setInterval(loadStats, 5000);
+setInterval(loadLaptopMetrics, 5000);
 setInterval(loadEvents, 10000);
 </script>
 </body>
@@ -180,6 +150,16 @@ def init_db():
                 event_type TEXT NOT NULL,
                 message TEXT NOT NULL,
                 severity TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS laptop_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                hostname TEXT NOT NULL,
+                cpu_percent REAL NOT NULL,
+                memory_percent REAL NOT NULL,
+                disk_percent REAL NOT NULL
             )
         """)
         conn.commit()
@@ -213,6 +193,21 @@ def health():
 @app.route("/api/stats")
 def stats():
     return jsonify(get_system_stats())
+
+@app.route("/api/laptop-metrics")
+def laptop_metrics():
+    init_db()
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("""
+            SELECT timestamp, hostname, cpu_percent, memory_percent, disk_percent
+            FROM laptop_metrics ORDER BY id DESC LIMIT 1
+        """).fetchone()
+    if row is None:
+        return jsonify({"available": False})
+    result = dict(row)
+    result["available"] = True
+    return jsonify(result)
 
 @app.route("/api/events")
 def events():
@@ -252,11 +247,35 @@ def receive_agent_event():
         return jsonify({"error": "Invalid severity"}), 400
 
     init_db()
+    now = datetime.now().isoformat()
+
+    if event_type == "system_metrics":
+        try:
+            cpu = float(data["cpu_percent"])
+            memory = float(data["memory_percent"])
+            disk = float(data["disk_percent"])
+            hostname = str(data.get("hostname", "unknown"))[:255]
+
+            if not all(0 <= value <= 100 for value in (cpu, memory, disk)):
+                raise ValueError("Metrics must be between 0 and 100")
+
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.execute("""
+                    INSERT INTO laptop_metrics
+                    (timestamp, hostname, cpu_percent, memory_percent, disk_percent)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (now, hostname, cpu, memory, disk))
+
+        except (KeyError, TypeError, ValueError):
+            return jsonify({
+                "error": "system_metrics requires hostname, cpu_percent, memory_percent and disk_percent"
+            }), 400
+
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
             INSERT INTO events (timestamp, event_type, message, severity)
             VALUES (?, ?, ?, ?)
-        """, (datetime.now().isoformat(), event_type, message, severity))
+        """, (now, event_type, message, severity))
         conn.commit()
 
     return jsonify({"success": True, "message": "Event saved"}), 201
