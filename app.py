@@ -362,3 +362,31 @@ if __name__ == "__main__":
         port=port,
         debug=False
     )
+    @app.route("/api/agent/events", methods=["POST"])
+def receive_agent_event():
+    import hmac
+
+    api_key = os.environ.get("AGENT_API_KEY")
+    provided_key = request.headers.get("X-API-Key", "")
+
+    if not api_key or not hmac.compare_digest(provided_key, api_key):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    event_type = str(data.get("event_type", "agent_test"))[:50]
+    message = str(data.get("message", "Test event received"))[:500]
+    severity = str(data.get("severity", "info")).lower()
+
+    if severity not in ("info", "low", "medium", "high"):
+        return jsonify({"error": "Invalid severity"}), 400
+
+    conn = sqlite3.connect("netsentry.db")
+    conn.execute(
+        """INSERT INTO events (timestamp, event_type, message, severity)
+           VALUES (?, ?, ?, ?)""",
+        (datetime.now().isoformat(), event_type, message, severity)
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True, "message": "Event saved"}), 201
