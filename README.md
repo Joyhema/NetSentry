@@ -34,4 +34,14 @@ NetSentry is a Python-based network monitoring dashboard that displays network t
 This is a basic monitoring and heuristic-alert prototype. It is not a production-grade intrusion detection system, and an empty alert list does not guarantee that a network is secure.
 
 ## Project Status
-Local dashboard running; cloud deployment and further testing are pending.
+
+NetSentry is deployed on Render and provides a live monitoring dashboard.
+
+- **Cloud Deployment:** Deployed on Render.
+- **Laptop Monitoring:** CPU, memory, and disk metrics are collected by the Python agent.
+- **API Integration:** Agent events are submitted through an API-key-protected endpoint.
+- **Security Monitoring:** Keyword-based suspicious activity detection has been tested using a controlled test event.
+- **Dashboard:** System metrics and security events are displayed on the dashboard.
+- **Testing:** Basic API submission and alert detection tests have passed. Further testing and improvements are ongoing.
+
+**Note:** The current suspicious activity detection is rule-based and does not confirm real cyberattacks.
